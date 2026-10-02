@@ -1,0 +1,22 @@
+# Traffic mixes for the simulator. Keys: count, rate (tasks/second), concurrency, mix.
+default:
+  count: 2000
+  rate: 25.0
+  concurrency: 20
+  mix:
+    extract: 0.60
+    classify: 0.20
+    summarize: 0.10
+    reason: 0.06
+    code: 0.04
+
+fast:
+  count: 300
+  rate: 50.0
+  concurrency: 30
+  mix:
+    extract: 0.60
+    classify: 0.20
+    summarize: 0.10
+    reason: 0.06
+    code: 0.04

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DietGate - cost per successful task, and learning to lower it</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>DietGate</h1>
+    <p class="tagline">LLM gateway + self-optimizing router. Every request is priced; every task is judged; the router learns.</p>
+    <div id="badge" class="badge hidden">Synthetic traffic (mock models)</div>
+    <div class="admin-key">
+      <label>Admin key <input id="adminKey" type="password" placeholder="admin-dev-key"></label>
+      <button id="saveKey">save</button>
+      <span id="connState" class="conn">connecting...</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="cards" class="cards">
+      <div class="card"><h3>Spend</h3><div class="big" id="c-spend">-</div><div class="sub" id="c-savings">-</div></div>
+      <div class="card"><h3>Baseline spend (routed)</h3><div class="big" id="c-baseline">-</div><div class="sub">what the always-biggest model would cost, model:auto traffic</div></div>
+      <div class="card"><h3>Cost / successful task</h3><div class="big" id="c-cps">-</div><div class="sub" id="c-labeled">-</div></div>
+      <div class="card"><h3>Cache hit rate</h3><div class="big" id="c-cache">-</div><div class="sub" id="c-requests">-</div></div>
+      <div class="card"><h3>Gateway overhead</h3><div class="big" id="c-p50">-</div><div class="sub" id="c-p99">-</div></div>
+      <div class="card"><h3>Success rate</h3><div class="big" id="c-success">-</div><div class="sub" id="c-window">labeled tasks in window</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>Learning curve - cost per successful task</h2>
+      <div class="chartbox"><canvas id="curve"></canvas></div>
+      <p class="note">DietGate line vs. flat baseline line. High explore share = exploration phase.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Routing matrix - who serves what (share / success)</h2>
+      <table id="matrix"><thead><tr><th>task type</th><th>model</th><th>share</th><th>success</th><th>avg cost</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="panel">
+      <h2>Latency percentiles</h2>
+      <div class="chartbox small"><canvas id="latency"></canvas></div>
+    </section>
+
+    <section class="panel">
+      <h2>Recent requests</h2>
+      <table id="recent"><thead><tr><th>time</th><th>type</th><th>model</th><th>policy</th><th>decision reason</th><th>cost $</th><th>ovh ms</th><th>flags</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="panel">
+      <h2>Cost of learning (savings shown net)</h2>
+      <div id="learning-cost" class="learning-cost">-</div>
+    </section>
+
+    <section class="panel" id="controls">
+      <h2>Controls</h2>
+      <div class="controls">
+        <label>control key
+          <input id="controlKey" type="password" placeholder="disabled when empty">
+        </label>
+        <button id="saveControlKey">save</button>
+      </div>
+      <div class="controls">
+        <button id="sim-start" class="ctl">start simulator</button>
+        <button id="sim-stop" class="ctl">stop simulator</button>
+        <span id="sim-status">idle</span>
+      </div>
+      <div class="controls">
+        policy:
+        <button data-policy="static" class="ctl">static</button>
+        <button data-policy="thompson" class="ctl">thompson</button>
+        <button data-policy="cascade" class="ctl">cascade</button>
+        <button id="reset" class="ctl danger">reset stats &amp; data</button>
+      </div>
+      <div class="controls"><label>scenario
+        <select id="scenario" class="ctl"><option value="fast">fast (300)</option><option value="default">default (2000)</option></select>
+      </label></div>
+      <p class="note">Controls need the separate control key (env DIETGATE_CONTROL_KEY on the server). It is disabled by default on public deployments.</p>
+    </section>
+  </main>
+
+  <footer>DietGate demo gateway - all numbers come from the database, nothing is hard-coded. <span id="sim-badge" class="badge hidden">Synthetic traffic (mock models)</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>

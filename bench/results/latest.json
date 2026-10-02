@@ -1,0 +1,41 @@
+{
+  "hardware": {
+    "platform": "Windows-10-10.0.19045-SP0",
+    "processor": "Intel64 Family 6 Model 44 Stepping 2, GenuineIntel",
+    "cpu_count": 12,
+    "python": "3.12.0"
+  },
+  "internal_overhead": {
+    "nonstream": {
+      "requests_measured": 1200,
+      "wall_rps": 150.3,
+      "client_p50_ms": 6.475,
+      "client_p99_ms": 10.743,
+      "overhead_p50_ms": 0.1382,
+      "overhead_p90_ms": 0.158,
+      "overhead_p99_ms": 0.2417,
+      "overhead_samples": 1600
+    },
+    "stream": {
+      "requests_measured": 1200,
+      "wall_rps": 145.6,
+      "client_p50_ms": 6.743,
+      "client_p99_ms": 10.454,
+      "overhead_p50_ms": 0.429,
+      "overhead_p90_ms": 0.4972,
+      "overhead_p99_ms": 0.6816,
+      "overhead_samples": 1400
+    }
+  },
+  "crosscheck": {
+    "n": 400,
+    "direct_p50_ms": 5.546,
+    "direct_p99_ms": 7.802,
+    "gateway_p50_ms": 5.765,
+    "gateway_p99_ms": 6.548,
+    "diff_p50_ms": 0.22,
+    "diff_p99_ms": -1.254,
+    "gateway_rps": 172.2,
+    "gateway_median_ms": 5.765
+  }
+}

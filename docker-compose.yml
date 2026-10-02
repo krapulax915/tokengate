@@ -1,0 +1,21 @@
+services:
+  gateway:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DIETGATE_DEMO_MODE: "true"
+      DIETGATE_AUTO_START_SIM: "true"   # dashboard starts filling immediately
+      # Required: create a .env file next to this compose file with a strong,
+      # random admin key (this is the dashboard read key):
+      #   DIETGATE_ADMIN_KEY=<64+ random chars>
+      DIETGATE_ADMIN_KEY: ${DIETGATE_ADMIN_KEY:?set DIETGATE_ADMIN_KEY in .env}
+      # Optional: set this ONLY if you want the simulator/policy/reset controls
+      # enabled on this deployment. Left empty (default) = controls disabled.
+      DIETGATE_CONTROL_KEY: ${DIETGATE_CONTROL_KEY:-}
+      # DIETGATE_DISABLE_REAL_PROVIDERS: "true"
+    volumes:
+      - dietgate-data:/app/data
+
+volumes:
+  dietgate-data:

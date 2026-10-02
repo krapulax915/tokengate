@@ -1,0 +1,7 @@
+tasks:
+  extract:   { min_success: 0.90, baseline: mock-large, candidates: [mock-small, mock-medium, mock-large] }
+  classify:  { min_success: 0.90, baseline: mock-large, candidates: [mock-small, mock-medium, mock-large] }
+  summarize: { min_success: 0.88, baseline: mock-large, candidates: [mock-medium, mock-large] }
+  reason:    { min_success: 0.90, baseline: mock-large, candidates: [mock-medium, mock-large] }
+  code:      { min_success: 0.90, baseline: mock-large, candidates: [mock-medium, mock-large] }
+  unknown:   { min_success: 0.95, baseline: mock-large, candidates: [mock-large] }

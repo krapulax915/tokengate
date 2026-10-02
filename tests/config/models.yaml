@@ -1,0 +1,22 @@
+# Test catalog: same prices/skills as the demo, but zero latency so tests run fast.
+models:
+  - id: mock-large
+    provider: mock
+    price_in_per_mtok: 10.0
+    price_out_per_mtok: 30.0
+    mock: { ttft_ms: 0, tokens_per_second: 0, jitter_pct: 0,
+            skill: { extract: 0.98, classify: 0.98, summarize: 0.97, reason: 0.96, code: 0.95 } }
+
+  - id: mock-medium
+    provider: mock
+    price_in_per_mtok: 1.0
+    price_out_per_mtok: 3.0
+    mock: { ttft_ms: 0, tokens_per_second: 0, jitter_pct: 0,
+            skill: { extract: 0.98, classify: 0.98, summarize: 0.93, reason: 0.75, code: 0.70 } }
+
+  - id: mock-small
+    provider: mock
+    price_in_per_mtok: 0.10
+    price_out_per_mtok: 0.30
+    mock: { ttft_ms: 0, tokens_per_second: 0, jitter_pct: 0,
+            skill: { extract: 0.96, classify: 0.96, summarize: 0.70, reason: 0.40, code: 0.30 } }

@@ -1,0 +1,14 @@
+api_keys: ["dg-demo-key"]
+rate_limit: { requests_per_min: 6000, burst: 6000 }
+daily_spend_cap_usd: 1000.0
+cache: { enabled: true, ttl_s: 300, max_entries: 1000 }
+policy: thompson
+evaluator: { sample_rate: 0.05, delay_s: 0.05 }
+writer: { queue_size: 10000, batch_size: 200, flush_interval_ms: 50 }
+shortcuts_enabled: true
+admin_key: "admin-test-key"
+control_key: "control-test-key"
+demo_mode: true
+store_prompts: false
+request_size_limit_bytes: 262144
+upstream_timeout_s: 10

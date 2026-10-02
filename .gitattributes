@@ -1,0 +1,15 @@
+# Normalize line endings: LF in the repository, native in the working tree.
+* text=auto
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+.env.example text eol=lf

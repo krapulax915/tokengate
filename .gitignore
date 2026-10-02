@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# tooling / local state
+.pytest_cache/
+.mimosa/
+.mypy_cache/
+.ruff_cache/
+
+# environment / secrets
+.env
+
+# packaging artifacts (releases go through git tags, not zips)
+*.zip
+
+# runtime data (regenerable: python -m sim.traffic / scripts/seed_demo.py)
+data/
+
+# test databases that leak out of tmp_path
+tests/*.db
+tests/*.db-wal
+tests/*.db-shm

@@ -1,0 +1,35 @@
+# Gateway behaviour. All of this is read once at startup and kept in memory.
+api_keys: ["dg-demo-key"]          # Bearer tokens accepted on the data plane
+
+rate_limit:
+  requests_per_min: 6000           # sustained rate per key (token bucket refill)
+  burst: 300                       # bucket capacity; sized for the local demo load
+
+daily_spend_cap_usd: 50.0          # per key, per UTC day, in-memory counter
+
+cache:
+  enabled: true
+  ttl_s: 300
+  max_entries: 1000
+
+policy: thompson                   # static | thompson | cascade (header X-Policy overrides)
+
+evaluator:
+  sample_rate: 0.05                # fraction of unlabeled requests sent to shadow evaluation
+  delay_s: 2.0                     # wait before shadow judging, so client feedback can win the race
+
+writer:
+  queue_size: 10000                # events buffered before we start dropping
+  batch_size: 200
+  flush_interval_ms: 250
+
+shortcuts_enabled: true
+
+admin_key: "admin-dev-key"         # protects /admin/* reads (dashboard); override with DIETGATE_ADMIN_KEY
+control_key: ""                    # protects POST /admin controls; EMPTY = controls disabled.
+                                   # Set a strong value (env DIETGATE_CONTROL_KEY) to enable the
+                                   # simulator/policy/reset buttons - never ship a default one.
+demo_mode: true                    # required for controls in addition to control_key
+store_prompts: false               # never store prompt text by default
+request_size_limit_bytes: 262144   # 256 KB
+upstream_timeout_s: 60

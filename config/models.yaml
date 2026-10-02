@@ -1,0 +1,49 @@
+# Model catalog for DietGate.
+# Mock prices are arbitrary but realistic in ratio (they are not real provider prices).
+# Skill probabilities are the mock's chance of producing the correct answer.
+# Note (DECISIONS.md D18): skills for extract/classify/summarize are wider than
+# the original spec example so the 0.88-0.90 quality targets are statistically
+# separable within the demo's traffic budget; the spec's expected routing
+# outcome (extract/classify -> mock-small, summarize -> mock-medium) is preserved.
+# Real models: add entries with provider: openai_compat | anthropic and fill the
+# price fields from the provider's official pricing page (do not guess).
+models:
+  - id: mock-large
+    provider: mock
+    price_in_per_mtok: 10.0      # USD per 1M input tokens
+    price_out_per_mtok: 30.0
+    mock:
+      ttft_ms: 400
+      tokens_per_second: 70
+      jitter_pct: 15
+      skill: { extract: 0.98, classify: 0.98, summarize: 0.97, reason: 0.96, code: 0.95 }
+
+  - id: mock-medium
+    provider: mock
+    price_in_per_mtok: 1.0
+    price_out_per_mtok: 3.0
+    mock:
+      ttft_ms: 250
+      tokens_per_second: 110
+      jitter_pct: 15
+      skill: { extract: 0.98, classify: 0.98, summarize: 0.93, reason: 0.75, code: 0.70 }
+
+  - id: mock-small
+    provider: mock
+    price_in_per_mtok: 0.10
+    price_out_per_mtok: 0.30
+    mock:
+      ttft_ms: 120
+      tokens_per_second: 200
+      jitter_pct: 15
+      skill: { extract: 0.96, classify: 0.96, summarize: 0.70, reason: 0.40, code: 0.30 }
+
+  # --- Real providers (examples; fill real prices from the provider's pricing page) ---
+  # - id: gpt-4o-mini
+  #   provider: openai_compat
+  #   price_in_per_mtok: 0.00   # <- fill from official pricing page
+  #   price_out_per_mtok: 0.00  # <- fill from official pricing page
+  # - id: claude-3-5-haiku-latest
+  #   provider: anthropic
+  #   price_in_per_mtok: 0.00   # <- fill from official pricing page
+  #   price_out_per_mtok: 0.00  # <- fill from official pricing page
