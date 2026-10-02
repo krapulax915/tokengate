@@ -27,6 +27,7 @@ import asyncio
 import json
 import os
 import platform
+import secrets
 import shutil
 import statistics
 import subprocess
@@ -43,6 +44,9 @@ sys.path.insert(0, str(REPO / "src"))
 
 GATEWAY_PORT = 8123
 DIRECT_PORT = 8124
+# Per-run random keys: the bench gateway runs with demo_mode=false, so the
+# startup safety check refuses the shipped dev keys (as it should).
+BENCH_KEY = "bench-" + secrets.token_hex(16)
 WARMUP = {"nonstream": 400, "stream": 200}
 MEASURED = {"nonstream": 1200, "stream": 1200}
 CROSSCHECK_N = 400
@@ -60,7 +64,7 @@ ZERO_MODELS = """models:
     mock: { ttft_ms: 0, tokens_per_second: 0, jitter_pct: 0, skill: { extract: 1.0 } }
 """
 
-BENCH_APP_YAML = """api_keys: ["{api_key}"]
+BENCH_APP_YAML = """api_keys: ["{BENCH_KEY}"]
 rate_limit: {{ requests_per_min: 600000, burst: 50000 }}
 daily_spend_cap_usd: 1000000.0
 cache: {{ enabled: false, ttl_s: 300, max_entries: 100 }}
@@ -68,7 +72,7 @@ policy: thompson
 evaluator: {{ sample_rate: 0.0, delay_s: 0.0 }}
 writer: {{ queue_size: 200000, batch_size: 500, flush_interval_ms: 100 }}
 shortcuts_enabled: false
-admin_key: "{api_key}"
+admin_key: "{BENCH_KEY}"
 control_key: ""
 demo_mode: false
 store_prompts: false
@@ -77,20 +81,12 @@ upstream_timeout_s: 30
 """
 
 
-def _api_key() -> str:
-    import yaml
-
-    cfg = yaml.safe_load((REPO / "config" / "app.yaml").read_text(encoding="utf-8"))
-    return cfg["api_keys"][0]
-
-
 def _make_config(tmp: Path) -> Path:
     config_dir = tmp / "config"
     config_dir.mkdir()
     (config_dir / "models.yaml").write_text(ZERO_MODELS, encoding="utf-8")
     shutil.copy(REPO / "config" / "tasks.yaml", config_dir / "tasks.yaml")
-    key = _api_key()
-    (config_dir / "app.yaml").write_text(BENCH_APP_YAML.format(api_key=key), encoding="utf-8")
+    (config_dir / "app.yaml").write_text(BENCH_APP_YAML.format(BENCH_KEY=BENCH_KEY), encoding="utf-8")
     return config_dir
 
 
@@ -118,13 +114,13 @@ async def _wait_healthy(client: httpx.AsyncClient, url: str, timeout_s: float = 
 
 
 async def _drive(client: httpx.AsyncClient, url: str, n: int, stream: bool,
-                 api_key: str, offset: int = 0) -> tuple[list[float], float]:
+                 auth_key: str, offset: int = 0) -> tuple[list[float], float]:
     """Drive n sequential (concurrency 1) requests; return (latencies_s, wall_s)."""
     latencies: list[float] = []
     wall0 = time.perf_counter()
     for i in range(n):
         body = {**BODY, "stream": stream}
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+        headers = {"Authorization": f"Bearer {auth_key}", "Content-Type": "application/json",
                    "X-Task-Id": f"bench-{offset + i}"}
         t0 = time.perf_counter()
         if stream:
@@ -153,7 +149,6 @@ def _hardware() -> dict:
 
 
 async def main_async() -> None:
-    api_key = _api_key()
     tmp = Path(tempfile.mkdtemp(prefix="dietgate-bench-"))
     config_dir = _make_config(tmp)
     env = {"DIETGATE_CONFIG_DIR": str(config_dir), "DIETGATE_DB_PATH": str(tmp / "bench.db"),
@@ -167,15 +162,15 @@ async def main_async() -> None:
         async with httpx.AsyncClient(timeout=60.0) as client:
             await _wait_healthy(client, gateway_url)
             await _wait_healthy(client, f"http://127.0.0.1:{DIRECT_PORT}")
-            admin = {"X-Admin-Key": api_key}
+            admin = {"X-Admin-Key": BENCH_KEY}
 
             for mode, stream in (("nonstream", False), ("stream", True)):
                 print(f"warmup ({mode}): {WARMUP[mode]} requests ...")
                 await _drive(client, f"{gateway_url}/v1/chat/completions",
-                             WARMUP[mode], stream, api_key)
+                             WARMUP[mode], stream, BENCH_KEY)
                 print(f"measured ({mode}): {MEASURED[mode]} requests at concurrency 1 ...")
                 lat, wall = await _drive(client, f"{gateway_url}/v1/chat/completions",
-                                         MEASURED[mode], stream, api_key)
+                                         MEASURED[mode], stream, BENCH_KEY)
                 latency_api = (await client.get(
                     f"{gateway_url}/admin/latency?window=1h&stream={1 if stream else 0}",
                     headers=admin,
@@ -197,10 +192,10 @@ async def main_async() -> None:
                       f"({r['overhead_samples']} samples)")
 
             print(f"cross-check: {CROSSCHECK_N} direct vs {CROSSCHECK_N} gateway (c=1, nonstream) ...")
-            await _drive(client, direct_url, 100, False, api_key)  # direct warmup
-            direct_lat, _ = await _drive(client, direct_url, CROSSCHECK_N, False, api_key, 900000)
+            await _drive(client, direct_url, 100, False, BENCH_KEY)  # direct warmup
+            direct_lat, _ = await _drive(client, direct_url, CROSSCHECK_N, False, BENCH_KEY, 900000)
             gw_lat, _ = await _drive(client, f"{gateway_url}/v1/chat/completions",
-                                     CROSSCHECK_N, False, api_key, 800000)
+                                     CROSSCHECK_N, False, BENCH_KEY, 800000)
             results["crosscheck"] = {
                 "n": CROSSCHECK_N,
                 "direct_p50_ms": round(_pct(direct_lat, 50), 3),

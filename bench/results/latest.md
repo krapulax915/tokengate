@@ -1,6 +1,6 @@
 # DietGate gateway overhead (latest run)
 
-- Date: 2026-10-02 21:17 Közép-európai nyári idő 
+- Date: 2026-10-02 22:06 Közép-európai nyári idő 
 - Hardware: Intel64 Family 6 Model 44 Stepping 2, GenuineIntel | 12 logical cores | Windows-10-10.0.19045-SP0
 - Python: 3.12.0 | zero-latency mock models | concurrency 1
 
@@ -13,14 +13,14 @@ first requests cost 1-19 ms and are discarded).
 
 | mode | samples | overhead p50 | p90 | p99 | client p50 | client p99 | rps |
 |---|---|---|---|---|---|---|---|
-| nonstream | 1600 | 0.1382 | 0.158 | 0.2417 | 6.475 | 10.743 | 150.3 |
-| stream | 1400 | 0.429 | 0.4972 | 0.6816 | 6.743 | 10.454 | 145.6 |
+| nonstream | 1600 | 0.1353 | 0.1529 | 0.2308 | 6.437 | 10.894 | 151.8 |
+| stream | 1400 | 0.4343 | 0.5014 | 0.7472 | 6.717 | 11.072 | 145.8 |
 
 ## Cross-check: external client-measured difference, concurrency 1 (non-stream)
 
-- direct handler: p50 5.546 ms / p99 7.802 ms
-- through gateway: p50 5.765 ms / p99 6.548 ms
-- difference: **p50 0.22 ms / p99 -1.254 ms**
+- direct handler: p50 6.095 ms / p99 9.955 ms
+- through gateway: p50 6.462 ms / p99 9.007 ms
+- difference: **p50 0.367 ms / p99 -0.949 ms**
 
 Cross-check interpretation: the p50 difference is consistent with the
 internal measurement; the p99 difference is tail noise from two independent

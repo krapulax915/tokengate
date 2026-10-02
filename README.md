@@ -2,7 +2,7 @@
 
 > A fast LLM gateway + self-optimizing router that measures **cost per successful task** - and learns to make it lower.
 
-**Measured on this machine** (Windows 10, Intel 12 logical cores, Python 3.12.0): the gateway's own per-request overhead is **p50 0.14 ms / p99 0.24 ms** non-stream and **p50 0.43 ms / p99 0.68 ms** streaming (spec section 5 definition, zero-latency mocks, concurrency 1, 1200+ measured requests per mode after warmup - full table with hardware in [`bench/results/latest.md`](bench/results/latest.md)).
+**Measured on this machine** (Windows 10, Intel 12 logical cores, Python 3.12.0): the gateway's **own per-request processing** overhead is **p50 0.14 ms / p99 0.23 ms** non-stream and **p50 0.43 ms / p99 0.75 ms** streaming (spec section 5 definition, zero-latency mocks, concurrency 1, 1200+ measured requests per mode after warmup). **End to end, a client sees more**: the external cross-check puts the gateway-vs-bare-handler difference at **~0.37 ms p50 over loopback** on this machine (+0.66 ms on a 1-core Linux sandbox) - that number includes one extra HTTP hop plus the ASGI server, so it is the honest client-visible figure; the internal ~0.1 ms is what the routing logic itself costs. Full tables with hardware: [`bench/results/latest.md`](bench/results/latest.md).
 
 DietGate is an OpenAI-compatible gateway where every request is priced, every task outcome is labeled, and a cost-aware Thompson-sampling router sends each task type to the cheapest model that still meets its quality target. The dashboard shows the full loop live: `request -> execution -> cost -> latency -> outcome -> learn -> optimize`.
 
@@ -44,7 +44,7 @@ All numbers below were measured on this machine and come from the database or th
 | Cost awareness | every request row carries prompt/completion tokens, `cost_usd` and `baseline_cost_usd` |
 | Learning | 2000-task sim: `extract` traffic -> `mock-small` 89%, `summarize` -> `mock-medium` 67%, `reason`/`code` -> `mock-large` 65-74%; success 95.5%; cost per successful task -52% (first 200 vs last 200) |
 | Savings | routed (`model: auto`) traffic (the sim's whole 2000 tasks): spend $0.277 vs baseline $1.719 (**83.9%**); exploration spend shown separately, savings reported net of it |
-| Low overhead | gateway-measured overhead p50 0.14 ms / p99 0.24 ms (non-stream), p50 0.43 ms / p99 0.68 ms (stream) - [`bench/results/latest.md`](bench/results/latest.md) |
+| Low overhead | gateway's own processing: p50 0.14 ms / p99 0.23 ms (non-stream), p50 0.43 ms / p99 0.75 ms (stream); client-visible end-to-end delta over loopback: ~0.37 ms p50 (includes one extra HTTP hop) - [`bench/results/latest.md`](bench/results/latest.md) |
 
 ## Known rough edges of the demo run (so you don't have to ask)
 
