@@ -29,8 +29,8 @@ def make_settings(tmp_path: Path | None = None, db_path: Path | None = None) -> 
     )
 
 
-def make_app(tmp_path: Path | None = None, db_path: Path | None = None):
-    return create_app(make_settings(tmp_path, db_path))
+def make_app(tmp_path: Path | None = None, db_path: Path | None = None, settings=None):
+    return create_app(settings or make_settings(tmp_path, db_path))
 
 
 @pytest.fixture

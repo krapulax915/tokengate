@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     disable_real_providers: bool = False
     auto_start_sim: bool = False
 
+    public: bool = False                    # PUBLIC deployment: refuse default credentials at startup
+    api_keys: str | None = None             # comma-separated data-plane keys; overrides app.yaml
+
     seed: int = 42                          # deterministic seed for the mock provider
 
 

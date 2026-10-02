@@ -81,9 +81,13 @@ async def stop_background(rt: Runtime) -> None:
 
 
 def build_runtime(settings: Settings) -> Runtime:
+    from dietgate.core.config import apply_api_keys_override, validate_public_safety
+
     catalog = load_models(settings.config_dir, settings.disable_real_providers)
     tasks_cfg = load_tasks(settings.config_dir)
     app_cfg = load_app(settings.config_dir, _app_cfg_overrides(settings))
+    app_cfg = apply_api_keys_override(app_cfg, settings.api_keys)
+    validate_public_safety(app_cfg, public=settings.public)
     registry = build_registry(catalog, settings, app_cfg)
     rt = Runtime(
         settings=settings,

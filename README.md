@@ -92,9 +92,10 @@ There are deliberately **no concurrency >= 50 rows**: subtracting quantiles of t
 
 ## Keys and controls
 
-- `dg-demo-key` (config/app.yaml): data-plane API key for local development.
+- Data-plane API keys: `config/app.yaml` `api_keys`, or override via `DIETGATE_API_KEYS` (comma-separated). The shipped demo key is `dg-demo-key`.
 - `admin_key` / `DIETGATE_ADMIN_KEY`: read access to `/admin/*` (dashboard panels). Use a strong random value on any shared deployment.
 - `control_key` / `DIETGATE_CONTROL_KEY`: **separate** key for the mutating controls (simulator start/stop, policy switch, reset). It is **empty (disabled) by default** and docker-compose does not set it - a public demo can be watched, not stopped or reset, by people who only know the dashboard key.
+- **Startup protection**: with `DIETGATE_PUBLIC=true` (or `demo_mode=false`), the server **refuses to start** while the default credentials (`admin-dev-key` as admin key or `dg-demo-key` among the data-plane keys) are still configured, with an actionable error message. Local development (demo mode, no PUBLIC flag) is unaffected.
 
 ## Tests
 

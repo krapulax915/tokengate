@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
+
+# Shipped dev-only credentials. A public or non-demo deployment must never
+# boot with these (see validate_public_safety).
+DEFAULT_ADMIN_KEY = "admin-dev-key"
+DEFAULT_DATA_KEY = "dg-demo-key"
 
 
 class ConfigError(ValueError):
@@ -194,3 +199,37 @@ def load_app(config_dir: Path, overrides: dict | None = None) -> AppConfig:
         if value is not None:
             object.__setattr__(cfg, key, value)
     return cfg
+
+
+def apply_api_keys_override(app_cfg: AppConfig, api_keys_env: str | None) -> AppConfig:
+    """DIETGATE_API_KEYS (comma-separated) overrides config/app.yaml api_keys."""
+    if not api_keys_env:
+        return app_cfg
+    keys = [k.strip() for k in api_keys_env.split(",") if k.strip()]
+    if not keys:
+        raise ConfigError("DIETGATE_API_KEYS is set but contains no usable keys")
+    return replace(app_cfg, api_keys=keys)
+
+
+def validate_public_safety(app_cfg: AppConfig, *, public: bool) -> None:
+    """Refuse to boot a public or non-demo deployment on default credentials.
+
+    Triggered by DIETGATE_PUBLIC=true or demo_mode=false. Local development
+    (demo_mode=true, no PUBLIC flag) may keep the shipped demo keys.
+    """
+    if not (public or not app_cfg.demo_mode):
+        return
+    problems: list[str] = []
+    if app_cfg.admin_key == DEFAULT_ADMIN_KEY:
+        problems.append(
+            "admin_key is the default 'admin-dev-key' (set a strong DIETGATE_ADMIN_KEY)"
+        )
+    if DEFAULT_DATA_KEY in app_cfg.api_keys:
+        problems.append(
+            "api_keys contains the default 'dg-demo-key' (set DIETGATE_API_KEYS)"
+        )
+    if problems:
+        raise ConfigError(
+            "refusing to start: default credentials in a public or non-demo deployment"
+            " (DIETGATE_PUBLIC=true or demo_mode=false). Fix: " + "; ".join(problems)
+        )
