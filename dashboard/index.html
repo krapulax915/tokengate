@@ -13,7 +13,7 @@
     <p class="tagline">LLM gateway + self-optimizing router. Every request is priced; every task is judged; the router learns.</p>
     <div id="badge" class="badge hidden">Synthetic traffic (mock models)</div>
     <div class="admin-key">
-      <label>Admin key <input id="adminKey" type="password" placeholder="admin-dev-key"></label>
+      <label>Admin key <input id="adminKey" type="password" placeholder="admin key (not needed on a public read-only demo)"></label>
       <button id="saveKey">save</button>
       <span id="connState" class="conn">connecting...</span>
     </div>
@@ -32,7 +32,7 @@
     <section class="panel">
       <h2>Learning curve - cost per successful task</h2>
       <div class="chartbox"><canvas id="curve"></canvas></div>
-      <p class="note">DietGate line vs. flat baseline line. High explore share = exploration phase.</p>
+      <p class="note">DietGate cost per successful task vs. what the always-biggest model would cost for the same traffic (the baseline moves with the task mix). A high explore share (right axis) marks the exploration phase.</p>
     </section>
 
     <section class="panel">

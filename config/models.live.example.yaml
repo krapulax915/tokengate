@@ -1,0 +1,41 @@
+# Example entries for REAL providers. Copy the ones you want into config/models.yaml.
+#
+# You must fill in BOTH of these yourself, from the provider's official docs:
+#   - id: the exact model id the provider expects
+#   - price_in_per_mtok / price_out_per_mtok: USD per 1M input / output tokens
+# DietGate refuses to start if a real model has no explicit prices (a forgotten price
+# would silently report $0 and corrupt every savings number).
+#
+# Models without their API key in the environment are excluded from routing, and
+# DIETGATE_DISABLE_REAL_PROVIDERS=true excludes them entirely (mock-only demos).
+#
+# After adding a model, also add its id to the candidates of the task types you want it
+# to serve in config/tasks.yaml (and set that task type's `baseline` if it should be the
+# reference for savings).
+
+models:
+  - id: REPLACE_WITH_ANTHROPIC_MODEL_ID        # needs ANTHROPIC_API_KEY
+    provider: anthropic
+    price_in_per_mtok: REPLACE_ME
+    price_out_per_mtok: REPLACE_ME
+
+  - id: REPLACE_WITH_OPENAI_COMPATIBLE_MODEL_ID  # needs OPENAI_API_KEY (+ OPENAI_BASE_URL for vLLM/OpenRouter)
+    provider: openai_compat
+    price_in_per_mtok: REPLACE_ME
+    price_out_per_mtok: REPLACE_ME
+
+  # ---- Worked example: GLM-5.3-Flash on Novita (OpenAI-compatible) ---------------------
+  # Values below were read from Novita's model page on 2026-10-03; prices change, so check
+  # https://novita.ai/models-console/model-detail/zai-org-glm-5.3-flash before relying on them.
+  # Needs NOVITA_API_KEY in the environment (never in a file that is committed).
+  - id: novita-glm-5.3-flash                 # the name clients use with DietGate
+    provider: openai_compat
+    base_url: https://api.novita.ai/openai
+    api_key_env: NOVITA_API_KEY
+    upstream_model: zai-org/glm-5.3-flash    # the provider's own id
+    price_in_per_mtok: 0.15
+    price_out_per_mtok: 0.50
+    # GLM-5.3-Flash always thinks (Z.ai documents this as non-disableable): thinking tokens
+    # are billed as output tokens and count against max_tokens, so clients must leave room
+    # (>= 1024) or the visible answer comes back empty. First-token latency is seconds, not ms.
+    # extra_body: { reasoning_effort: low }  # only if the provider documents it for this model

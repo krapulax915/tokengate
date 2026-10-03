@@ -26,10 +26,12 @@ class Settings(BaseSettings):
     control_key: str | None = None          # overrides app.yaml control_key when set
     demo_mode: bool | None = None           # overrides app.yaml demo_mode when set
     store_prompts: bool | None = None       # overrides app.yaml store_prompts when set
+    public_dashboard: bool | None = None    # read-only dashboard without a key (mock-only demos)
     disable_real_providers: bool = False
     auto_start_sim: bool = False
+    auto_sim_scenario: str = "default"      # sim/scenarios.yaml entry used by the auto-start (2000 tasks)
 
-    public: bool = False                    # PUBLIC deployment: refuse default credentials at startup
+    public: bool = False                    # PUBLIC deployment: refuse default/short credentials at startup
     api_keys: str | None = None             # comma-separated data-plane keys; overrides app.yaml
 
     seed: int = 42                          # deterministic seed for the mock provider

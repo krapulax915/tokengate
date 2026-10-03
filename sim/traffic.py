@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import random
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
@@ -140,7 +141,11 @@ async def run_scenario(
     concurrency = int(scenario.get("concurrency", 10))
     mix = scenario.get("mix") or {}
     rng = random.Random(seed)
-    tasks = generate_mix(mix, rng, count, prefix=f"{name}")
+    # Task ids must be unique per run: outcomes are keyed by task_id and joined to requests, so a
+    # second run on the same (persistent) database with identical ids would attach the new
+    # outcomes to the old runs' requests and corrupt the router's rebuilt statistics.
+    run_tag = uuid.uuid4().hex[:6]
+    tasks = generate_mix(mix, rng, count, prefix=f"{name}-{run_tag}")
     result = ScenarioResult(name=name, policy=policy or "gateway-default")
 
     limits = httpx.Limits(max_connections=concurrency + 10, max_keepalive_connections=concurrency)

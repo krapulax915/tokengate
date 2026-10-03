@@ -2,18 +2,33 @@ services:
   gateway:
     build: .
     ports:
-      - "8080:8080"
+      # Local default: reachable only from this machine. On a server behind a reverse
+      # proxy keep 127.0.0.1 (proxy runs on the host); set DIETGATE_BIND=0.0.0.0 only if
+      # you really want to expose the container port directly.
+      - "${DIETGATE_BIND:-127.0.0.1}:8080:8080"
     environment:
       DIETGATE_DEMO_MODE: "true"
       DIETGATE_AUTO_START_SIM: "true"   # dashboard starts filling immediately
-      # Required: create a .env file next to this compose file with a strong,
-      # random admin key (this is the dashboard read key):
-      #   DIETGATE_ADMIN_KEY=<64+ random chars>
+      DIETGATE_AUTO_SIM_SCENARIO: ${DIETGATE_AUTO_SIM_SCENARIO:-default}   # default = 2000 tasks (~80 s); "fast" = 300
+      # Required: create a .env file next to this compose file (see .env.example).
+      # Dashboard read key (>= 16 random chars on a public deployment):
       DIETGATE_ADMIN_KEY: ${DIETGATE_ADMIN_KEY:?set DIETGATE_ADMIN_KEY in .env}
-      # Optional: set this ONLY if you want the simulator/policy/reset controls
-      # enabled on this deployment. Left empty (default) = controls disabled.
+      # Data-plane API keys, comma-separated. Empty = the key from config/app.yaml
+      # (local development only; DIETGATE_PUBLIC=true refuses it).
+      DIETGATE_API_KEYS: ${DIETGATE_API_KEYS:-}
+      # Optional: enables the simulator/policy/reset controls. Empty = controls disabled.
       DIETGATE_CONTROL_KEY: ${DIETGATE_CONTROL_KEY:-}
-      # DIETGATE_DISABLE_REAL_PROVIDERS: "true"
+      # Internet-facing deployment: refuse default/short keys at startup.
+      DIETGATE_PUBLIC: ${DIETGATE_PUBLIC:-false}
+      # Read-only dashboard without a key (mock-only demos; refused if real providers exist).
+      DIETGATE_PUBLIC_DASHBOARD: ${DIETGATE_PUBLIC_DASHBOARD:-false}
+      DIETGATE_DISABLE_REAL_PROVIDERS: ${DIETGATE_DISABLE_REAL_PROVIDERS:-false}
+      # Optional real providers (bring your own key); leave empty for a mock-only demo.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MAX_TOKENS_PARAM: ${OPENAI_MAX_TOKENS_PARAM:-max_tokens}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      NOVITA_API_KEY: ${NOVITA_API_KEY:-}
     volumes:
       - dietgate-data:/app/data
 

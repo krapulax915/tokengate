@@ -15,6 +15,8 @@ router = APIRouter(prefix="/admin")
 
 def _require_admin(request: Request) -> None:
     rt = request.app.state.rt
+    if rt.app_cfg.public_dashboard:
+        return  # read-only synthetic data; validate_public_safety guarantees mock-only
     provided = request.headers.get("x-admin-key") or ""
     if not provided:
         auth = request.headers.get("authorization") or ""

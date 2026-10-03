@@ -4,11 +4,14 @@ Exploit branch is the spec pseudocode: sample P(success) from each arm's Beta
 posterior, keep arms whose sample meets the quality target, pick the cheapest
 among them; if none is eligible pick the best-looking sample.
 
-Two documented additions (DECISIONS.md D18) keep the loop convergent in
+Three documented additions (DECISIONS.md D18, D33) keep the loop convergent in
 practice:
 - a bounded exploration boost during a task type's first `warmup_rounds`
   labeled outcomes, aimed at the least-tried arm, so cheap arms get enough
   data to prove themselves before the posterior judges them;
+- forced exploration only targets arms that could still meet the quality target
+  (upper 95% credible bound >= target), so arms the data already rules out stop
+  costing quality on low-volume task types (D33);
 - the demo skill margins in config/models.yaml are wide enough for the
   target to be statistically separable within the demo's traffic budget.
 """
@@ -30,11 +33,13 @@ class ThompsonPolicy:
         explore_boost: float = 0.20,
         warmup_rounds: int = 300,
         seed: int = 1234,
+        prune_explore: bool = True,
     ) -> None:
         self._deps = deps
         self._eps = eps
         self._boost = explore_boost
         self._warmup_rounds = warmup_rounds
+        self._prune = prune_explore
         self._rng = random.Random(seed)
 
     def decide(self, ctx: RequestContext) -> Decision:
@@ -50,8 +55,9 @@ class ThompsonPolicy:
 
         # forced exploration: least-tried candidate, random tiebreak
         if self._rng.random() < eps_eff:
-            least = min(labeled.values())
-            pool = [m for m in candidates if labeled[m] == least]
+            pickable = self._plausible(task_type, candidates, cfg.min_success) if self._prune else candidates
+            least = min(labeled[m] for m in pickable)
+            pool = [m for m in pickable if labeled[m] == least]
             pick = self._rng.choice(pool)
             phase = "warmup" if in_warmup else "eps"
             return Decision(
@@ -85,6 +91,21 @@ class ThompsonPolicy:
             reason=reason,
             fallbacks=self._deps.fallback_order(task_type, pick),
         )
+
+    def _plausible(self, task_type: str, candidates: list[str], target: float) -> list[str]:
+        """Arms that could still turn out to meet the quality target.
+
+        Forced exploration used to sample every arm, including ones whose data already rule
+        them out (upper 95% credible bound below the target); with low-volume task types that
+        waste is a large share of the traffic and drags the success rate under the target.
+        An arm with too little data keeps a wide interval, so it stays explorable.
+        """
+        keep = []
+        for m in candidates:
+            st = self._deps.stats.get(task_type, m)
+            if st is None or st.ci95()[1] >= target:
+                keep.append(m)
+        return keep or list(candidates)
 
     def _labeled(self, task_type: str, model_id: str) -> int:
         st = self._deps.stats.get(task_type, model_id)

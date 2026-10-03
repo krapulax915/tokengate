@@ -3,7 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from dietgate.core.config import AppConfig, ModelSpec, TaskSpec, load_app, load_models, load_tasks
+from dietgate.core.config import (
+    AppConfig,
+    ModelSpec,
+    TaskSpec,
+    load_app,
+    load_models,
+    load_tasks,
+)
 from dietgate.providers.registry import ProviderRegistry, build_registry
 from dietgate.settings import Settings
 
@@ -35,6 +42,7 @@ def _app_cfg_overrides(settings: Settings) -> dict:
         "control_key": settings.control_key,
         "demo_mode": settings.demo_mode,
         "store_prompts": settings.store_prompts,
+        "public_dashboard": settings.public_dashboard,
     }
 
 
@@ -62,7 +70,7 @@ async def start_background(rt: Runtime) -> None:
             f"http://127.0.0.1:{rt.settings.port}", api_key=rt.app_cfg.api_keys[0]
         )
         if rt.settings.auto_start_sim:
-            rt.sim_runner.start("fast")
+            rt.sim_runner.start(rt.settings.auto_sim_scenario)
 
 
 async def stop_background(rt: Runtime) -> None:
@@ -87,7 +95,7 @@ def build_runtime(settings: Settings) -> Runtime:
     tasks_cfg = load_tasks(settings.config_dir)
     app_cfg = load_app(settings.config_dir, _app_cfg_overrides(settings))
     app_cfg = apply_api_keys_override(app_cfg, settings.api_keys)
-    validate_public_safety(app_cfg, public=settings.public)
+    validate_public_safety(app_cfg, public=settings.public, catalog=catalog)
     registry = build_registry(catalog, settings, app_cfg)
     rt = Runtime(
         settings=settings,

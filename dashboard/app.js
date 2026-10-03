@@ -51,8 +51,9 @@ async function controlApi(path, body) {
 
 function fmtUsd(v) {
   if (v === null || v === undefined) return "-";
-  if (v !== 0 && Math.abs(v) < 0.01) return "$" + v.toExponential(2);
-  return "$" + Number(v).toFixed(4);
+  v = Number(v);
+  if (v !== 0 && Math.abs(v) < 0.01) return "$" + v.toFixed(6);
+  return "$" + v.toFixed(4);
 }
 function fmtMs(v) {
   return v === null || v === undefined ? "-" : Number(v).toFixed(2) + " ms";
@@ -80,33 +81,55 @@ async function refreshCards() {
 }
 
 async function refreshCurve() {
-  const data = await api("/admin/learning_curve?bucket=30s&window=24h");
+  const data = await api("/admin/learning_curve?bucket=10s&window=24h");
   const labels = data.series.map((p) =>
     new Date(p.ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
   );
   const actual = data.series.map((p) => p.cost_per_success_usd);
   const baseline = data.series.map((p) => p.baseline_per_success_usd);
-  const explore = data.series.map((p) => p.explore_share);
-  const ctx = $("curve").getContext("2d");
-  if (curveChart) curveChart.destroy();
-  curveChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        { label: "DietGate $/success", data: actual, borderColor: "#4fd1a5", tension: 0.25, pointRadius: 0 },
-        { label: "baseline $/success", data: baseline, borderColor: "#5b9dff", borderDash: [6, 4], tension: 0.1, pointRadius: 0 },
-        { label: "explore share", data: explore, borderColor: "#f2b950", yAxisID: "y2", tension: 0.2, pointRadius: 0 },
-      ],
-    },
-    options: {
-      interaction: { mode: "index", intersect: false },
-      scales: {
-        y: { type: "linear", title: { display: true, text: "$ per successful task" } },
-        y2: { display: false, min: 0, max: 1 },
+  const explore = data.series.map((p) => (p.explore_share === null ? null : p.explore_share * 100));
+  if (!curveChart) {
+    const ctx = $("curve").getContext("2d");
+    curveChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "DietGate $/success", data: actual, borderColor: "#4fd1a5", tension: 0.25, pointRadius: 0 },
+          { label: "baseline $/success (always the biggest model)", data: baseline, borderColor: "#5b9dff", borderDash: [6, 4], tension: 0.1, pointRadius: 0 },
+          { label: "explore share (right axis, %)", data: explore, borderColor: "#f2b950", yAxisID: "y2", tension: 0.2, pointRadius: 0, borderWidth: 1.5 },
+        ],
       },
-    },
-  });
+      options: {
+        responsive: true,
+        maintainAspectRatio: false, // fill the 300px-high box instead of a fixed 2:1 aspect ratio
+        animation: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: {
+            type: "linear",
+            beginAtZero: true,
+            title: { display: true, text: "$ per successful task" },
+            ticks: { callback: (v) => "$" + Number(v).toFixed(4) },
+          },
+          y2: {
+            position: "right",
+            min: 0,
+            max: 100,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: "explore share" },
+            ticks: { callback: (v) => v + "%" },
+          },
+        },
+      },
+    });
+    return;
+  }
+  curveChart.data.labels = labels;
+  curveChart.data.datasets[0].data = actual;
+  curveChart.data.datasets[1].data = baseline;
+  curveChart.data.datasets[2].data = explore;
+  curveChart.update("none");
 }
 
 async function refreshMatrix() {
@@ -126,20 +149,37 @@ async function refreshMatrix() {
 async function refreshLatency() {
   const data = await api("/admin/latency?window=24h");
   const labels = ["p50", "p90", "p99"];
-  const ctx = $("latency").getContext("2d");
-  if (latencyChart) latencyChart.destroy();
-  latencyChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: "gateway overhead ms", data: labels.map((l) => data.overhead_ms[l]), backgroundColor: "#4fd1a5" },
-        { label: "TTFT ms (mock)", data: labels.map((l) => data.ttft_ms[l]), backgroundColor: "#5b9dff" },
-        { label: "total ms (mock)", data: labels.map((l) => data.total_ms[l]), backgroundColor: "#324056" },
-      ],
-    },
-    options: { scales: { y: { beginAtZero: true } } },
-  });
+  const series = [
+    labels.map((l) => data.overhead_ms[l]),
+    labels.map((l) => data.ttft_ms[l]),
+    labels.map((l) => data.total_ms[l]),
+  ];
+  if (!latencyChart) {
+    const ctx = $("latency").getContext("2d");
+    latencyChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "gateway overhead ms", data: series[0], backgroundColor: "#4fd1a5" },
+          { label: "TTFT ms (mock)", data: series[1], backgroundColor: "#5b9dff" },
+          { label: "total ms (mock)", data: series[2], backgroundColor: "#324056" },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          // log scale: a ~0.2 ms gateway overhead is invisible next to hundreds of ms of (mock) model latency
+          y: { type: "logarithmic", min: 0.01, title: { display: true, text: "ms (log scale)" } },
+        },
+      },
+    });
+    return;
+  }
+  series.forEach((d, i) => (latencyChart.data.datasets[i].data = d));
+  latencyChart.update("none");
 }
 
 async function refreshRecent() {

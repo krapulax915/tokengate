@@ -44,21 +44,21 @@ def test_public_with_custom_keys_starts(tmp_path) -> None:
         settings=make_test_settings(
             public=True,
             admin_key="strong-admin-key",
-            api_keys="client-a,client-b",
+            api_keys="client-a-0123456789,client-b-0123456789",
         ),
     )
-    assert app.state.rt.app_cfg.api_keys == ["client-a", "client-b"]
+    assert app.state.rt.app_cfg.api_keys == ["client-a-0123456789", "client-b-0123456789"]
 
 
 async def test_api_keys_override_changes_auth(tmp_path) -> None:
     """DIETGATE_API_KEYS replaces the yaml keys: dg-demo-key stops working."""
-    app = make_app(tmp_path, settings=make_test_settings(api_keys="client-a"))
+    app = make_app(tmp_path, settings=make_test_settings(api_keys="client-a-0123456789"))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r_new = await client.post(
             CHAT_URL,
             json={"model": "mock-small",
                   "messages": [{"role": "user", "content": "Extract fields: 1 EUR"}]},
-            headers={"Authorization": "Bearer client-a"},
+            headers={"Authorization": "Bearer client-a-0123456789"},
         )
         r_old = await client.post(
             CHAT_URL,

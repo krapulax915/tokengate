@@ -91,6 +91,9 @@ class SimRunner:
         assert self._stop_event is not None
         state = self.state
         try:
+            # The auto-start fires inside the app's startup, before uvicorn accepts connections:
+            # without this wait the very first task hits "connection refused" and is counted as a failure.
+            await self._wait_until_ready()
             await run_scenario(
                 cfg,
                 name=f"dashboard-{state.scenario}",
@@ -105,6 +108,21 @@ class SimRunner:
             state.last_error = f"{type(exc).__name__}: {exc}"
         finally:
             state.running = False
+
+    async def _wait_until_ready(self, timeout_s: float = 20.0) -> None:
+        import httpx
+
+        deadline = time.monotonic() + timeout_s
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            while time.monotonic() < deadline:
+                if self._stop_event is not None and self._stop_event.is_set():
+                    return
+                try:
+                    if (await client.get(f"{self.base_url}/healthz")).status_code == 200:
+                        return
+                except httpx.HTTPError:
+                    pass
+                await asyncio.sleep(0.25)
 
     def _on_result(self, task_type: str, ok: bool) -> None:
         self.state.done += 1

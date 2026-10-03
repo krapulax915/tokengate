@@ -78,3 +78,30 @@ async def test_traffic_runs_against_gateway(tmp_path) -> None:
         assert result.cost_sum > 0
         assert result.baseline_sum > result.cost_sum  # savings vs baseline exist
         assert await rt.db.count_outcomes() == 12  # one checker label per task
+
+
+async def test_second_run_uses_fresh_task_ids(tmp_path) -> None:
+    """Same scenario + seed twice on one database must not reuse task ids.
+
+    Outcomes are keyed by task_id and joined to requests; reused ids made a second run overwrite
+    the first run's outcomes and attach them to the wrong requests/models (corrupting the
+    router statistics that are rebuilt from the database on restart).
+    """
+    app = make_app(tmp_path)
+    rt = app.state.rt
+    async with app.router.lifespan_context(app):
+        scenario = {"count": 10, "rate": 100.0, "concurrency": 5, "mix": {"extract": 1.0}}
+        sim_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+        try:
+            for _ in range(2):
+                await run_scenario(
+                    scenario, name="dup", base_url="http://test", api_key=DEMO_API_KEY,
+                    policy="thompson", seed=3, quiet=True, client=sim_client,
+                )
+        finally:
+            await sim_client.aclose()
+        await rt.learner.drain()
+        await rt.writer.drain()
+        assert await rt.db.count_outcomes() == 20          # nothing was overwritten
+        rows = await rt.db.get_labeled_requests()
+        assert len({r["task_id"] for r in rows}) == 20

@@ -165,3 +165,40 @@ async def test_cascade_escalates_on_verify_failure(tmp_path) -> None:
     # header cost matches the persisted row and includes both attempts (>0)
     assert resp.headers["X-Dg-Cost-Usd"] == f"{row['cost_usd']:.8f}"
     assert row["cost_usd"] > 0
+
+
+def _feed(deps: PolicyDeps, task_type: str, model: str, successes: int, failures: int) -> None:
+    for _ in range(successes):
+        deps.stats.record_outcome(task_type, model, True)
+    for _ in range(failures):
+        deps.stats.record_outcome(task_type, model, False)
+
+
+def test_forced_exploration_skips_arms_ruled_out_by_data() -> None:
+    """reason: target 0.90. mock-medium has 30 labels at 70% -> upper bound < 0.90 -> not explored."""
+    deps = make_deps()
+    _feed(deps, "reason", "mock-medium", 21, 9)
+    policy = ThompsonPolicy(deps, eps=1.0, explore_boost=0.0, seed=3)   # every call explores
+    picks = {policy.decide(make_ctx("reason")).model_id for _ in range(60)}
+    assert picks == {"mock-large"}
+
+
+def test_forced_exploration_keeps_arms_with_little_data() -> None:
+    deps = make_deps()
+    _feed(deps, "reason", "mock-medium", 2, 1)       # 3 labels: interval still wide
+    _feed(deps, "reason", "mock-large", 2, 1)        # equally tried, so both are in the least-tried pool
+    policy = ThompsonPolicy(deps, eps=1.0, explore_boost=0.0, seed=3)
+    picks = {policy.decide(make_ctx("reason")).model_id for _ in range(80)}
+    assert "mock-medium" in picks
+
+
+def test_exploration_pruning_can_be_disabled_and_never_empties_the_pool() -> None:
+    deps = make_deps()
+    _feed(deps, "reason", "mock-medium", 21, 9)
+    _feed(deps, "reason", "mock-large", 12, 18)       # both ruled out -> fall back to all candidates
+    policy = ThompsonPolicy(deps, eps=1.0, explore_boost=0.0, seed=3)
+    assert {policy.decide(make_ctx("reason")).model_id for _ in range(80)} == {"mock-medium", "mock-large"}
+    off = ThompsonPolicy(make_deps(), eps=1.0, explore_boost=0.0, seed=3, prune_explore=False)
+    _feed(off._deps, "reason", "mock-medium", 21, 9)
+    _feed(off._deps, "reason", "mock-large", 29, 1)  # equally tried: the ruled-out arm is still explored
+    assert "mock-medium" in {off.decide(make_ctx("reason")).model_id for _ in range(80)}
